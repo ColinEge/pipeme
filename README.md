@@ -22,5 +22,11 @@ pipeme
 ```
 ### flags
 - `-d <dir>` directory to start search
+- `-i dir1,dir2` paths to ignore
 - `-f` show files as well as directories
 - `-c` copy tree to clipboard
+
+### full example
+```bash
+pipeme -d ./path -i .git,.gitignore,node_modules -f -c
+```

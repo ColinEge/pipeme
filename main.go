@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/atotto/clipboard"
@@ -14,11 +15,17 @@ func main() {
 	// CLI flags
 	showFiles := flag.Bool("f", false, "Include files in the tree")
 	dir := flag.String("d", ".", "Directory to print")
+	ignore := flag.String("i", "", "Relative paths to ignore (comma separated)")
 	copyClipboard := flag.Bool("c", false, "Copy output to clipboard")
 	flag.Parse()
 
+	ignores := strings.Split(*ignore, ",")
+	for i, v := range ignores {
+		ignores[i] = strings.TrimSpace(v)
+	}
+
 	// Generate tree into builder
-	tree := writeTree(*dir, *showFiles)
+	tree := writeTree(*dir, *showFiles, ignores...)
 
 	// Output to CLI
 	fmt.Print(tree)
@@ -34,25 +41,22 @@ func main() {
 	}
 }
 
-func writeTree(path string, showFiles bool) string {
+func writeTree(path string, showFiles bool, ignore ...string) string {
 	var builder strings.Builder
-	writeTreeRecurse(path, "", showFiles, &builder)
+	ignore = cleanIgnores(path, ignore)
+	writeTreeRecurse(path, "", showFiles, ignore, &builder)
 	return builder.String()
+
 }
 
-func writeTreeRecurse(path string, prefix string, showFiles bool, builder *strings.Builder) {
+func writeTreeRecurse(path string, prefix string, showFiles bool, ignore []string, builder *strings.Builder) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	var filtered []os.DirEntry
-	for _, e := range entries {
-		if e.IsDir() || showFiles {
-			filtered = append(filtered, e)
-		}
-	}
+	filtered := filterEntries(path, entries, ignore, showFiles)
 
 	for i, entry := range filtered {
 		isLast := i == len(filtered)-1
@@ -67,7 +71,29 @@ func writeTreeRecurse(path string, prefix string, showFiles bool, builder *strin
 		}
 
 		if entry.IsDir() {
-			writeTreeRecurse(filepath.Join(path, entry.Name()), newPrefix, showFiles, builder)
+			writeTreeRecurse(filepath.Join(path, entry.Name()), newPrefix, showFiles, ignore, builder)
 		}
 	}
+}
+
+func filterEntries(path string, dirs []os.DirEntry, ignore []string, includeFiles bool) []os.DirEntry {
+	var filtered []os.DirEntry
+	for _, e := range dirs {
+		if !e.IsDir() && !includeFiles {
+			continue
+		}
+		if slices.Contains(ignore, filepath.Join(path, e.Name())) {
+			continue
+		}
+		filtered = append(filtered, e)
+	}
+	return filtered
+}
+
+func cleanIgnores(path string, ignores []string) []string {
+	var newIgnores []string
+	for _, v := range ignores {
+		newIgnores = append(newIgnores, strings.TrimPrefix(v, path+string(os.PathSeparator)))
+	}
+	return newIgnores
 }
