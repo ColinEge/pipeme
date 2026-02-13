@@ -1,6 +1,6 @@
 # Pipe Me
 
-A CLI tool for converting directory structures into a readable markdown structure  to your terminal
+A CLI tool for converting directory structures into a readable markdown structure to your terminal or clipboard
 
 ```
 ├── folder1
@@ -23,4 +23,4 @@ pipeme
 ### flags
 - `-d <dir>` directory to start search
 - `-f` show files as well as directories
-
+- `-c` copy tree to clipboard
